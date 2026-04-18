@@ -33,7 +33,11 @@ export default function LoginPage() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (err instanceof Error && err.message) {
+        setError(err.message);
+      } else {
+        setError("Network error — could not reach Supabase. Check that your project is active and your URL/key are correct.");
+      }
     } finally {
       setBusy(false);
     }
