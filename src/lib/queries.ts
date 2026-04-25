@@ -184,6 +184,7 @@ export function useDeleteTransaction() {
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.accounts });
+      qc.invalidateQueries({ queryKey: queryKeys.account(vars.account_id) });
       qc.invalidateQueries({ queryKey: queryKeys.transactions(vars.account_id) });
     },
   });
@@ -218,6 +219,8 @@ export function useTransfer() {
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.accounts });
+      qc.invalidateQueries({ queryKey: queryKeys.account(vars.from_account) });
+      qc.invalidateQueries({ queryKey: queryKeys.account(vars.to_account) });
       qc.invalidateQueries({ queryKey: queryKeys.transactions(vars.from_account) });
       qc.invalidateQueries({ queryKey: queryKeys.transactions(vars.to_account) });
     },

@@ -63,6 +63,12 @@ export default function AccountDetail({ id }: { id: string }) {
 
   const negative = account.balance < 0;
   const txList = transactions ?? [];
+  const runningBalancesByTxId = new Map<string, number>();
+  let runningBalance = account.starting_balance;
+  for (const tx of [...txList].reverse()) {
+    runningBalance = Math.round((runningBalance + tx.amount) * 100) / 100;
+    runningBalancesByTxId.set(tx.id, runningBalance);
+  }
 
   return (
     <div className="space-y-6">
@@ -135,6 +141,7 @@ export default function AccountDetail({ id }: { id: string }) {
               <TransactionRow
                 key={tx.id}
                 tx={tx}
+                runningBalance={runningBalancesByTxId.get(tx.id)}
                 onDelete={() => {
                   const ok = window.confirm(
                     tx.transfer_id
