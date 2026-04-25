@@ -36,6 +36,11 @@ export type AccountBalanceRow = AccountRow & {
 
 export type TransactionKind = "deposit" | "withdrawal" | "transfer";
 
+export type TransferDetails = {
+  from_account_name: string;
+  to_account_name: string;
+};
+
 export type TransactionRow = {
   id: string;
   user_id: string;
@@ -46,4 +51,5 @@ export type TransactionRow = {
   note: string | null;
   occurred_at: string;
   created_at: string;
+  transfer_details?: TransferDetails;
 };

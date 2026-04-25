@@ -19,10 +19,18 @@ export default function TransactionRow({ tx, runningBalance, onDelete }: Props) 
   const positive = tx.amount >= 0;
   const date = new Date(tx.occurred_at);
   const runningNegative = (runningBalance ?? 0) < 0;
+  const transferDetails = tx.transfer_details
+    ? `${tx.transfer_details.from_account_name} → ${tx.transfer_details.to_account_name}`
+    : null;
   return (
     <div className="flex items-center gap-3 py-3 border-b border-slate-200 dark:border-slate-800 last:border-b-0">
       <div className="min-w-0 flex-1">
         <div className="font-medium truncate">{describeKind(tx)}</div>
+        {transferDetails && (
+          <div className="text-sm text-slate-700 dark:text-slate-300 truncate">
+            {transferDetails}
+          </div>
+        )}
         <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
           {date.toLocaleString(undefined, {
             month: "short",

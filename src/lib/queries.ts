@@ -109,6 +109,17 @@ export function useDeleteAccount() {
 
 // ---------------- Transactions ----------------
 
+type TransferLegRow = {
+  transfer_id: string | null;
+  amount: number | string;
+  accounts: { name: string } | { name: string }[] | null;
+};
+
+function getAccountName(accounts: TransferLegRow["accounts"]): string {
+  if (Array.isArray(accounts)) return accounts[0]?.name ?? "Unknown account";
+  return accounts?.name ?? "Unknown account";
+}
+
 export function useTransactions(accountId: string | undefined) {
   return useQuery({
     queryKey: accountId ? queryKeys.transactions(accountId) : ["transactions", "none"],
@@ -122,7 +133,41 @@ export function useTransactions(accountId: string | undefined) {
         .order("occurred_at", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((r) => ({ ...r, amount: Number(r.amount) })) as TransactionRow[];
+      const transactions = (data ?? []).map((r) => ({ ...r, amount: Number(r.amount) })) as TransactionRow[];
+      const transferIds = Array.from(
+        new Set(transactions.map((tx) => tx.transfer_id).filter((id): id is string => Boolean(id))),
+      );
+
+      if (transferIds.length === 0) return transactions;
+
+      const { data: transferLegs, error: transferLegsError } = await supabase
+        .from("transactions")
+        .select("transfer_id, amount, accounts(name)")
+        .in("transfer_id", transferIds)
+        .eq("kind", "transfer");
+      if (transferLegsError) throw transferLegsError;
+
+      const transferLegsById = new Map<string, TransferLegRow[]>();
+      for (const leg of (transferLegs ?? []) as TransferLegRow[]) {
+        if (!leg.transfer_id) continue;
+        transferLegsById.set(leg.transfer_id, [...(transferLegsById.get(leg.transfer_id) ?? []), leg]);
+      }
+
+      const transferDetailsById = new Map<string, TransactionRow["transfer_details"]>();
+      for (const [transferId, matchingLegs] of transferLegsById) {
+        const fromLeg = matchingLegs.find((candidate) => Number(candidate.amount) < 0);
+        const toLeg = matchingLegs.find((candidate) => Number(candidate.amount) > 0);
+        if (!fromLeg || !toLeg) continue;
+        transferDetailsById.set(transferId, {
+          from_account_name: getAccountName(fromLeg.accounts),
+          to_account_name: getAccountName(toLeg.accounts),
+        });
+      }
+
+      return transactions.map((tx) => ({
+        ...tx,
+        transfer_details: tx.transfer_id ? transferDetailsById.get(tx.transfer_id) : undefined,
+      }));
     },
   });
 }
