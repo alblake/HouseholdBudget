@@ -72,95 +72,99 @@ export default function AccountDetail({ id }: { id: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      <AccountOverview />
+    <div className="space-y-6 lg:grid lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
+      <aside className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
+        <AccountOverview variant="sidebar" activeAccountId={account.id} />
+      </aside>
 
-      <section className="card p-5">
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            {editingName ? (
-              <div className="flex gap-2">
-                <input
-                  autoFocus
-                  className="input"
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void onRename();
-                    if (e.key === "Escape") setEditingName(false);
-                  }}
-                />
-                <button className="btn-primary" onClick={() => void onRename()}>Save</button>
-                <button className="btn-ghost" onClick={() => setEditingName(false)}>Cancel</button>
+      <div className="space-y-6">
+        <section className="card p-5">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              {editingName ? (
+                <div className="flex gap-2">
+                  <input
+                    autoFocus
+                    className="input"
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void onRename();
+                      if (e.key === "Escape") setEditingName(false);
+                    }}
+                  />
+                  <button className="btn-primary" onClick={() => void onRename()}>Save</button>
+                  <button className="btn-ghost" onClick={() => setEditingName(false)}>Cancel</button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-semibold truncate">{account.name}</h1>
+                  <button
+                    className="btn-ghost text-xs"
+                    onClick={() => { setNameDraft(account.name); setEditingName(true); }}
+                  >
+                    Rename
+                  </button>
+                </div>
+              )}
+              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Starting balance {formatMoney(account.starting_balance)} ·
+                {" "}{txList.length} {txList.length === 1 ? "transaction" : "transactions"}
               </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-semibold truncate">{account.name}</h1>
-                <button
-                  className="btn-ghost text-xs"
-                  onClick={() => { setNameDraft(account.name); setEditingName(true); }}
-                >
-                  Rename
-                </button>
-              </div>
-            )}
-            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Starting balance {formatMoney(account.starting_balance)} ·
-              {" "}{txList.length} {txList.length === 1 ? "transaction" : "transactions"}
+            </div>
+            <div className={`text-3xl font-semibold tabular-nums ${negative ? "text-red-600 dark:text-red-400" : ""}`}>
+              {formatMoney(account.balance)}
             </div>
           </div>
-          <div className={`text-3xl font-semibold tabular-nums ${negative ? "text-red-600 dark:text-red-400" : ""}`}>
-            {formatMoney(account.balance)}
-          </div>
-        </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button onClick={() => setMode("deposit")} className="btn-primary">+ Deposit</button>
-          <button onClick={() => setMode("withdrawal")} className="btn-secondary">− Withdraw</button>
-          <button
-            onClick={() => setTransferOpen(true)}
-            className="btn-secondary"
-            disabled={(accounts?.length ?? 0) < 2}
-          >
-            ↔ Transfer
-          </button>
-          <button onClick={onDeleteAccount} className="btn-danger ml-auto">Delete account</button>
-        </div>
-      </section>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={() => setMode("deposit")} className="btn-primary">+ Deposit</button>
+            <button onClick={() => setMode("withdrawal")} className="btn-secondary">− Withdraw</button>
+            <button
+              onClick={() => setTransferOpen(true)}
+              className="btn-secondary"
+              disabled={(accounts?.length ?? 0) < 2}
+            >
+              ↔ Transfer
+            </button>
+            <button onClick={onDeleteAccount} className="btn-danger ml-auto">Delete account</button>
+          </div>
+        </section>
 
-      <section className="card p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
-          Transactions
-        </h2>
-        {txList.length === 0 ? (
-          <div className="text-sm text-slate-500 dark:text-slate-400 py-6 text-center">
-            No transactions yet. Use Deposit, Withdraw, or Transfer above.
-          </div>
-        ) : (
-          <div>
-            {txList.map((tx) => (
-              <TransactionRow
-                key={tx.id}
-                tx={tx}
-                runningBalance={runningBalancesByTxId.get(tx.id)}
-                onDelete={() => {
-                  const ok = window.confirm(
-                    tx.transfer_id
-                      ? "Delete this transfer? Both legs will be removed."
-                      : "Delete this transaction?",
-                  );
-                  if (!ok) return;
-                  void deleteTxMut.mutateAsync({
-                    id: tx.id,
-                    account_id: account.id,
-                    transfer_id: tx.transfer_id,
-                  });
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        <section className="card p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+            Transactions
+          </h2>
+          {txList.length === 0 ? (
+            <div className="text-sm text-slate-500 dark:text-slate-400 py-6 text-center">
+              No transactions yet. Use Deposit, Withdraw, or Transfer above.
+            </div>
+          ) : (
+            <div>
+              {txList.map((tx) => (
+                <TransactionRow
+                  key={tx.id}
+                  tx={tx}
+                  runningBalance={runningBalancesByTxId.get(tx.id)}
+                  onDelete={() => {
+                    const ok = window.confirm(
+                      tx.transfer_id
+                        ? "Delete this transfer? Both legs will be removed."
+                        : "Delete this transaction?",
+                    );
+                    if (!ok) return;
+                    void deleteTxMut.mutateAsync({
+                      id: tx.id,
+                      account_id: account.id,
+                      transfer_id: tx.transfer_id,
+                    });
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
 
       <DepositWithdrawModal
         open={mode !== null}

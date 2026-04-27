@@ -4,15 +4,16 @@ import { formatMoney } from "../lib/money";
 
 type Props = {
   account: AccountBalanceRow;
+  active?: boolean;
   onDeposit: () => void;
   onWithdraw: () => void;
   onTransfer: () => void;
 };
 
-export default function AccountCard({ account, onDeposit, onWithdraw, onTransfer }: Props) {
+export default function AccountCard({ account, active = false, onDeposit, onWithdraw, onTransfer }: Props) {
   const negative = account.balance < 0;
   return (
-    <div className="card p-4 flex flex-col gap-3">
+    <div className={`card p-4 flex flex-col gap-3 ${active ? "ring-2 ring-brand-500" : ""}`}>
       <Link
         href={`/accounts/${account.id}`}
         className="flex items-baseline justify-between gap-3 hover:opacity-90"

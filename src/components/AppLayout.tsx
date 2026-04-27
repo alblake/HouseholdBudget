@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           paddingRight: "env(safe-area-inset-right)",
         }}
       >
-        <div className="mx-auto max-w-3xl px-4 h-14 flex items-center gap-3">
+        <div className="mx-auto max-w-7xl px-4 h-14 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <span className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center text-sm">$</span>
             <span>Household Budget</span>
@@ -38,7 +38,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </header>
 
       <main
-        className="flex-1 mx-auto w-full max-w-3xl px-4 py-6 pb-[max(env(safe-area-inset-bottom),1.5rem)]"
+        className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         style={{
           paddingLeft: "max(1rem, env(safe-area-inset-left))",
           paddingRight: "max(1rem, env(safe-area-inset-right))",

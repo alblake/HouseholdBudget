@@ -9,6 +9,10 @@ import TransactionRow from "./TransactionRow";
 import type { AccountBalanceRow, TransactionWithAccountRow } from "../lib/supabase";
 
 type Action = { kind: "deposit" | "withdrawal"; account: AccountBalanceRow } | null;
+type Props = {
+  variant?: "full" | "sidebar";
+  activeAccountId?: string;
+};
 
 function getTransactionSearchText(tx: TransactionWithAccountRow): string {
   const kindLabel =
@@ -34,7 +38,7 @@ function getTransactionSearchText(tx: TransactionWithAccountRow): string {
     .toLowerCase();
 }
 
-export default function AccountOverview() {
+export default function AccountOverview({ variant = "full", activeAccountId }: Props) {
   const { data: accounts, isLoading, error } = useAccounts();
   const [action, setAction] = useState<Action>(null);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -53,12 +57,15 @@ export default function AccountOverview() {
   const matchingTransactions = normalizedSearch
     ? (transactions ?? []).filter((tx) => getTransactionSearchText(tx).includes(normalizedSearch))
     : [];
+  const isSidebar = variant === "sidebar";
+  const accountGridClass = isSidebar ? "grid gap-3" : "grid gap-3 sm:grid-cols-2";
+  const totalClass = isSidebar ? "mt-1 text-3xl" : "mt-1 text-4xl";
 
   return (
     <div className="space-y-6">
       <section className="card p-5">
         <div className="text-sm text-slate-500 dark:text-slate-400">Grand total</div>
-        <div className={`mt-1 text-4xl font-semibold tabular-nums ${negative ? "text-red-600 dark:text-red-400" : ""}`}>
+        <div className={`${totalClass} font-semibold tabular-nums ${negative ? "text-red-600 dark:text-red-400" : ""}`}>
           {formatMoney(grandTotal)}
         </div>
         <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -144,11 +151,12 @@ export default function AccountOverview() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={accountGridClass}>
           {list.map((a) => (
             <AccountCard
               key={a.id}
               account={a}
+              active={a.id === activeAccountId}
               onDeposit={() => setAction({ kind: "deposit", account: a })}
               onWithdraw={() => setAction({ kind: "withdrawal", account: a })}
               onTransfer={() => { setTransferFrom(a.id); setTransferOpen(true); }}
