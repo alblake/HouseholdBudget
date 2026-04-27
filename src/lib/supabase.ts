@@ -53,3 +53,7 @@ export type TransactionRow = {
   created_at: string;
   transfer_details?: TransferDetails;
 };
+
+export type TransactionWithAccountRow = TransactionRow & {
+  account_name: string;
+};

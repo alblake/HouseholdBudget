@@ -5,12 +5,14 @@ import {
   type AccountRow,
   type TransactionKind,
   type TransactionRow,
+  type TransactionWithAccountRow,
 } from "./supabase";
 
 export const queryKeys = {
   accounts: ["accounts"] as const,
   account: (id: string) => ["accounts", id] as const,
   transactions: (accountId: string) => ["transactions", accountId] as const,
+  allTransactions: ["transactions", "all"] as const,
 };
 
 // ---------------- Accounts ----------------
@@ -90,6 +92,7 @@ export function useRenameAccount() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.accounts });
       qc.invalidateQueries({ queryKey: queryKeys.account(vars.id) });
+      qc.invalidateQueries({ queryKey: queryKeys.allTransactions });
     },
   });
 }
@@ -103,6 +106,7 @@ export function useDeleteAccount() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.accounts });
+      qc.invalidateQueries({ queryKey: queryKeys.allTransactions });
     },
   });
 }
@@ -115,9 +119,50 @@ type TransferLegRow = {
   accounts: { name: string } | { name: string }[] | null;
 };
 
+type TransactionAccountRow = TransactionRow & {
+  accounts: { name: string } | { name: string }[] | null;
+};
+
 function getAccountName(accounts: TransferLegRow["accounts"]): string {
   if (Array.isArray(accounts)) return accounts[0]?.name ?? "Unknown account";
   return accounts?.name ?? "Unknown account";
+}
+
+async function addTransferDetails<T extends TransactionRow>(transactions: T[]): Promise<T[]> {
+  const transferIds = Array.from(
+    new Set(transactions.map((tx) => tx.transfer_id).filter((id): id is string => Boolean(id))),
+  );
+
+  if (transferIds.length === 0) return transactions;
+
+  const { data: transferLegs, error: transferLegsError } = await supabase
+    .from("transactions")
+    .select("transfer_id, amount, accounts(name)")
+    .in("transfer_id", transferIds)
+    .eq("kind", "transfer");
+  if (transferLegsError) throw transferLegsError;
+
+  const transferLegsById = new Map<string, TransferLegRow[]>();
+  for (const leg of (transferLegs ?? []) as TransferLegRow[]) {
+    if (!leg.transfer_id) continue;
+    transferLegsById.set(leg.transfer_id, [...(transferLegsById.get(leg.transfer_id) ?? []), leg]);
+  }
+
+  const transferDetailsById = new Map<string, TransactionRow["transfer_details"]>();
+  for (const [transferId, matchingLegs] of transferLegsById) {
+    const fromLeg = matchingLegs.find((candidate) => Number(candidate.amount) < 0);
+    const toLeg = matchingLegs.find((candidate) => Number(candidate.amount) > 0);
+    if (!fromLeg || !toLeg) continue;
+    transferDetailsById.set(transferId, {
+      from_account_name: getAccountName(fromLeg.accounts),
+      to_account_name: getAccountName(toLeg.accounts),
+    });
+  }
+
+  return transactions.map((tx) => ({
+    ...tx,
+    transfer_details: tx.transfer_id ? transferDetailsById.get(tx.transfer_id) : undefined,
+  }));
 }
 
 export function useTransactions(accountId: string | undefined) {
@@ -134,40 +179,33 @@ export function useTransactions(accountId: string | undefined) {
         .order("created_at", { ascending: false });
       if (error) throw error;
       const transactions = (data ?? []).map((r) => ({ ...r, amount: Number(r.amount) })) as TransactionRow[];
-      const transferIds = Array.from(
-        new Set(transactions.map((tx) => tx.transfer_id).filter((id): id is string => Boolean(id))),
-      );
+      return addTransferDetails(transactions);
+    },
+  });
+}
 
-      if (transferIds.length === 0) return transactions;
-
-      const { data: transferLegs, error: transferLegsError } = await supabase
+export function useAllTransactions(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.allTransactions,
+    enabled,
+    queryFn: async (): Promise<TransactionWithAccountRow[]> => {
+      const { data, error } = await supabase
         .from("transactions")
-        .select("transfer_id, amount, accounts(name)")
-        .in("transfer_id", transferIds)
-        .eq("kind", "transfer");
-      if (transferLegsError) throw transferLegsError;
+        .select("*, accounts(name)")
+        .order("occurred_at", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
 
-      const transferLegsById = new Map<string, TransferLegRow[]>();
-      for (const leg of (transferLegs ?? []) as TransferLegRow[]) {
-        if (!leg.transfer_id) continue;
-        transferLegsById.set(leg.transfer_id, [...(transferLegsById.get(leg.transfer_id) ?? []), leg]);
-      }
+      const transactions = ((data ?? []) as TransactionAccountRow[]).map((r) => {
+        const { accounts, ...tx } = r;
+        return {
+          ...tx,
+          amount: Number(tx.amount),
+          account_name: getAccountName(accounts),
+        };
+      }) as TransactionWithAccountRow[];
 
-      const transferDetailsById = new Map<string, TransactionRow["transfer_details"]>();
-      for (const [transferId, matchingLegs] of transferLegsById) {
-        const fromLeg = matchingLegs.find((candidate) => Number(candidate.amount) < 0);
-        const toLeg = matchingLegs.find((candidate) => Number(candidate.amount) > 0);
-        if (!fromLeg || !toLeg) continue;
-        transferDetailsById.set(transferId, {
-          from_account_name: getAccountName(fromLeg.accounts),
-          to_account_name: getAccountName(toLeg.accounts),
-        });
-      }
-
-      return transactions.map((tx) => ({
-        ...tx,
-        transfer_details: tx.transfer_id ? transferDetailsById.get(tx.transfer_id) : undefined,
-      }));
+      return addTransferDetails(transactions);
     },
   });
 }
@@ -210,6 +248,7 @@ export function useAddTransaction() {
       qc.invalidateQueries({ queryKey: queryKeys.accounts });
       qc.invalidateQueries({ queryKey: queryKeys.account(vars.account_id) });
       qc.invalidateQueries({ queryKey: queryKeys.transactions(vars.account_id) });
+      qc.invalidateQueries({ queryKey: queryKeys.allTransactions });
     },
   });
 }
@@ -231,6 +270,7 @@ export function useDeleteTransaction() {
       qc.invalidateQueries({ queryKey: queryKeys.accounts });
       qc.invalidateQueries({ queryKey: queryKeys.account(vars.account_id) });
       qc.invalidateQueries({ queryKey: queryKeys.transactions(vars.account_id) });
+      qc.invalidateQueries({ queryKey: queryKeys.allTransactions });
     },
   });
 }
@@ -268,6 +308,7 @@ export function useTransfer() {
       qc.invalidateQueries({ queryKey: queryKeys.account(vars.to_account) });
       qc.invalidateQueries({ queryKey: queryKeys.transactions(vars.from_account) });
       qc.invalidateQueries({ queryKey: queryKeys.transactions(vars.to_account) });
+      qc.invalidateQueries({ queryKey: queryKeys.allTransactions });
     },
   });
 }

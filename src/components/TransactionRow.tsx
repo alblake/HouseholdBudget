@@ -3,6 +3,7 @@ import { formatMoney } from "../lib/money";
 
 type Props = {
   tx: Tx;
+  accountName?: string;
   runningBalance?: number;
   onDelete?: () => void;
 };
@@ -15,7 +16,7 @@ function describeKind(tx: Tx): string {
   return "Withdrawal";
 }
 
-export default function TransactionRow({ tx, runningBalance, onDelete }: Props) {
+export default function TransactionRow({ tx, accountName, runningBalance, onDelete }: Props) {
   const positive = tx.amount >= 0;
   const date = new Date(tx.occurred_at);
   const runningNegative = (runningBalance ?? 0) < 0;
@@ -26,6 +27,11 @@ export default function TransactionRow({ tx, runningBalance, onDelete }: Props) 
     <div className="flex items-center gap-3 py-3 border-b border-slate-200 dark:border-slate-800 last:border-b-0">
       <div className="min-w-0 flex-1">
         <div className="font-medium truncate">{describeKind(tx)}</div>
+        {accountName && (
+          <div className="text-sm text-slate-700 dark:text-slate-300 truncate">
+            {accountName}
+          </div>
+        )}
         {transferDetails && (
           <div className="text-sm text-slate-700 dark:text-slate-300 truncate">
             {transferDetails}
