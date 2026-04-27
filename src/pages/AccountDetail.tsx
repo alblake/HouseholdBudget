@@ -9,6 +9,7 @@ import {
   useTransactions,
 } from "../lib/queries";
 import { formatMoney } from "../lib/money";
+import AccountOverview from "../components/AccountOverview";
 import TransactionRow from "../components/TransactionRow";
 import DepositWithdrawModal from "../components/DepositWithdrawModal";
 import TransferModal from "../components/TransferModal";
@@ -72,7 +73,7 @@ export default function AccountDetail({ id }: { id: string }) {
 
   return (
     <div className="space-y-6">
-      <Link href="/" className="text-sm text-brand-600 hover:underline">← Overview</Link>
+      <AccountOverview />
 
       <section className="card p-5">
         <div className="flex items-start gap-3">
